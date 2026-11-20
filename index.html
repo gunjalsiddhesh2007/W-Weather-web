@@ -1,20 +1,195 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#171411">
-<meta name="description" content="A considered daily view of weather, air quality and conditions around you.">
-<title>W weather — a daily field report</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css"><script src="script.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171411">
+  <meta name="description" content="A considered daily view of weather, air quality and conditions around you.">
+  <title>W weather — a daily field report</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Application Script -->
+  <script src="script.js" defer></script>
 </head>
-<body><main class="app">
-<header class="topbar"><a class="brand" href="#top" aria-label="W weather home"><span class="brandmark">W</span><span>W weather</span></a><div class="topright"><span id="today" class="date-label"></span><div class="unit-toggle" aria-label="Temperature units"><button id="cBtn" class="active">°C</button><button id="fBtn">°F</button></div></div></header>
-<section class="intro reveal" id="top"><div class="intro-copy"><div class="eyebrow">A daily field report <span class="live-dot"></span> Live</div><h1>Outside,<br><span>right now.</span></h1><p>A clear-eyed look at the weather and air around you.</p></div><div class="search-wrap"><label class="search-label" for="search">Choose a place</label><div class="searchbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><input id="search" placeholder="Search city or place" autocomplete="off"><button id="locate">Use my location ↗</button></div><div id="results" class="results"></div><div class="status" id="status"></div></div></section>
-<section class="weather-feature reveal"><div class="feature-label"><span class="label">01 / Conditions</span><span id="localTime" class="local-time">Getting local conditions</span></div><div class="feature-main"><div class="feature-place"><div class="location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg><span id="place">Loading location…</span></div><div class="temp" id="temp">--<sup>°</sup></div><div class="condition" id="condition">Looking outside…</div><div class="feels">Feels like <span id="feels">--</span></div></div><div class="feature-aside"><div class="aside-caption">The shape of today</div><div class="hi-lo"><span>High <b id="high">--°</b></span><span>Low <b id="low">--°</b></span></div><div class="sunline"><span><i>↑</i><span id="sunrise">--</span></span><span><i>↓</i><span id="sunset">--</span></span></div><div class="weather-mark" aria-hidden="true">☼</div></div></div></section>
-<section class="section reveal"><div class="section-heading"><div><div class="label">02 / The next hours</div><h2>Light through the day.</h2></div><div class="subtle">Temperature <span class="orange">/</span> chance of rain</div></div><div id="hourly" class="hourly"></div></section>
-<section class="section reveal"><div class="section-heading"><div><div class="label">03 / Selected conditions</div><h2>What the air is carrying.</h2></div><div class="subtle">Current air quality <span class="orange">/</span> US AQI</div></div><div class="air-panel"><div class="air-score"><div class="score-caption">US AQI</div><div class="gauge-value" id="aqi">--</div><span id="aqiStatus" class="aqi-status">Checking air…</span></div><div class="air-copy"><p id="aqiDesc">Current air quality information for your location.</p><div class="pollutants"><div class="pollutant"><b id="pm25">--</b><span>PM2.5 <i>μg/m³</i></span></div><div class="pollutant"><b id="pm10">--</b><span>PM10 <i>μg/m³</i></span></div><div class="pollutant"><b id="uv">--</b><span>UV index</span></div></div></div></div></section>
-<section class="section reveal"><div class="section-heading"><div><div class="label">04 / Outlook</div><h2>Five days, at a glance.</h2></div><div class="subtle">High <span class="orange">/</span> low</div></div><div id="days" class="days"></div></section>
-<section class="section reveal"><div class="section-heading"><div><div class="label">05 / Field notes</div><h2>Small things worth knowing.</h2></div><div class="subtle" id="detailDate"></div></div><div class="details-grid"><article class="detail"><div class="detail-top">01 — Wind</div><div class="detail-value" id="wind">--</div><div class="detail-note" id="windDir">at --</div></article><article class="detail"><div class="detail-top">02 — Humidity</div><div class="detail-value" id="humidity">--</div><div class="detail-note">Relative humidity</div></article><article class="detail"><div class="detail-top">03 — UV index</div><div class="detail-value" id="uvDetail">--</div><div class="detail-note" id="uvNote">Today's peak</div></article><article class="detail"><div class="detail-top">04 — Rain chance</div><div class="detail-value" id="rain">--</div><div class="detail-note">Chance today</div></article></div></section>
-<footer class="footer"><span>W weather <span class="orange">/</span> Weather and air data from Open-Meteo</span><a href="https://open-meteo.com/" target="_blank" rel="noreferrer">About the data ↗</a></footer>
-</main></body></html>
+<body>
+  <main class="app">
+    <!-- Header / Top Bar -->
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="W weather home">
+        <span class="brandmark">W</span>
+        <span>W weather</span>
+      </a>
+      <div class="topright">
+        <span id="today" class="date-label"></span>
+        <div class="unit-toggle" aria-label="Temperature units">
+          <button id="cBtn" class="active">°C</button>
+          <button id="fBtn">°F</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Intro & Location Search -->
+    <section class="intro reveal" id="top">
+      <div class="intro-copy">
+        <div class="eyebrow">A daily field report <span class="live-dot"></span> Live</div>
+        <h1>Outside,<br><span>right now.</span></h1>
+        <p>A clear-eyed look at the weather and air around you.</p>
+      </div>
+
+      <div class="search-wrap">
+        <label class="search-label" for="search">Choose a place</label>
+        <div class="searchbox">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="10.8" cy="10.8" r="6.8"/>
+            <path d="m16 16 4.5 4.5"/>
+          </svg>
+          <input id="search" placeholder="Search city or place" autocomplete="off">
+          <button id="locate">Use my location ↗</button>
+        </div>
+        <div id="results" class="results"></div>
+        <div class="status" id="status"></div>
+      </div>
+    </section>
+
+    <!-- 01 / Conditions -->
+    <section class="weather-feature reveal">
+      <div class="feature-label">
+        <span class="label">01 / Conditions</span>
+        <span id="localTime" class="local-time">Getting local conditions</span>
+      </div>
+      <div class="feature-main">
+        <div class="feature-place">
+          <div class="location">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/>
+              <circle cx="12" cy="10" r="2.5"/>
+            </svg>
+            <span id="place">Loading location…</span>
+          </div>
+          <div class="temp" id="temp">--<sup>°</sup></div>
+          <div class="condition" id="condition">Looking outside…</div>
+          <div class="feels">Feels like <span id="feels">--</span></div>
+        </div>
+
+        <div class="feature-aside">
+          <div class="aside-caption">The shape of today</div>
+          <div class="hi-lo">
+            <span>High <b id="high">--°</b></span>
+            <span>Low <b id="low">--°</b></span>
+          </div>
+          <div class="sunline">
+            <span><i>↑</i><span id="sunrise">--</span></span>
+            <span><i>↓</i><span id="sunset">--</span></span>
+          </div>
+          <div class="weather-mark" aria-hidden="true">☼</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 / The Next Hours -->
+    <section class="section reveal">
+      <div class="section-heading">
+        <div>
+          <div class="label">02 / The next hours</div>
+          <h2>Light through the day.</h2>
+        </div>
+        <div class="subtle">Temperature <span class="orange">/</span> chance of rain</div>
+      </div>
+      <div id="hourly" class="hourly"></div>
+    </section>
+
+    <!-- 03 / Selected Conditions & Air Quality -->
+    <section class="section reveal">
+      <div class="section-heading">
+        <div>
+          <div class="label">03 / Selected conditions</div>
+          <h2>What the air is carrying.</h2>
+        </div>
+        <div class="subtle">Current air quality <span class="orange">/</span> US AQI</div>
+      </div>
+      <div class="air-panel">
+        <div class="air-score">
+          <div class="score-caption">US AQI</div>
+          <div class="gauge-value" id="aqi">--</div>
+          <span id="aqiStatus" class="aqi-status">Checking air…</span>
+        </div>
+        <div class="air-copy">
+          <p id="aqiDesc">Current air quality information for your location.</p>
+          <div class="pollutants">
+            <div class="pollutant">
+              <b id="pm25">--</b>
+              <span>PM2.5 <i>μg/m³</i></span>
+            </div>
+            <div class="pollutant">
+              <b id="pm10">--</b>
+              <span>PM10 <i>μg/m³</i></span>
+            </div>
+            <div class="pollutant">
+              <b id="uv">--</b>
+              <span>UV index</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 / Outlook -->
+    <section class="section reveal">
+      <div class="section-heading">
+        <div>
+          <div class="label">04 / Outlook</div>
+          <h2>Five days, at a glance.</h2>
+        </div>
+        <div class="subtle">High <span class="orange">/</span> low</div>
+      </div>
+      <div id="days" class="days"></div>
+    </section>
+
+    <!-- 05 / Field Notes -->
+    <section class="section reveal">
+      <div class="section-heading">
+        <div>
+          <div class="label">05 / Field notes</div>
+          <h2>Small things worth knowing.</h2>
+        </div>
+        <div class="subtle" id="detailDate"></div>
+      </div>
+      <div class="details-grid">
+        <article class="detail">
+          <div class="detail-top">01 — Wind</div>
+          <div class="detail-value" id="wind">--</div>
+          <div class="detail-note" id="windDir">at --</div>
+        </article>
+        <article class="detail">
+          <div class="detail-top">02 — Humidity</div>
+          <div class="detail-value" id="humidity">--</div>
+          <div class="detail-note">Relative humidity</div>
+        </article>
+        <article class="detail">
+          <div class="detail-top">03 — UV index</div>
+          <div class="detail-value" id="uvDetail">--</div>
+          <div class="detail-note" id="uvNote">Today's peak</div>
+        </article>
+        <article class="detail">
+          <div class="detail-top">04 — Rain chance</div>
+          <div class="detail-value" id="rain">--</div>
+          <div class="detail-note">Chance today</div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>W weather <span class="orange">/</span> Weather and air data from Open-Meteo</span>
+      <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">About the data ↗</a>
+    </footer>
+  </main>
+</body>
+</html>

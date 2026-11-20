@@ -1,7 +1,445 @@
-const $=id=>document.getElementById(id);let unit='c',place={name:'Bengaluru',admin1:'Karnataka',country:'India',latitude:12.9716,longitude:77.5946,timezone:'Asia/Kolkata'};const wmo={0:['Clear sky','☀️'],1:['Mostly clear','🌤️'],2:['Partly cloudy','⛅'],3:['Overcast','☁️'],45:['Foggy','🌫️'],48:['Rime fog','🌫️'],51:['Light drizzle','🌦️'],53:['Drizzle','🌦️'],55:['Heavy drizzle','🌧️'],56:['Freezing drizzle','🌧️'],57:['Freezing drizzle','🌧️'],61:['Light rain','🌦️'],63:['Rain','🌧️'],65:['Heavy rain','🌧️'],66:['Freezing rain','🌧️'],67:['Heavy freezing rain','🌧️'],71:['Light snow','🌨️'],73:['Snow','🌨️'],75:['Heavy snow','❄️'],77:['Snow grains','🌨️'],80:['Rain showers','🌦️'],81:['Rain showers','🌧️'],82:['Heavy showers','⛈️'],85:['Snow showers','🌨️'],86:['Heavy snow showers','❄️'],95:['Thunderstorm','⛈️'],96:['Thunderstorm & hail','⛈️'],99:['Thunderstorm & hail','⛈️']};const label=code=>(wmo[code]||['Variable conditions','🌤️']);function fmtTemp(n){return Math.round(unit==='c'?n:n*9/5+32)+'°'}function dayName(d,i){return i===0?'Today':new Date(d+'T12:00:00').toLocaleDateString(undefined,{weekday:'short'})}function clock(s){return new Date(s).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}function localClock(s){try{return new Intl.DateTimeFormat([],{hour:'numeric',minute:'2-digit',timeZone:place.timezone}).format(new Date(s))}catch{return clock(s)}}function setStatus(s){$('status').textContent=s}function aqiInfo(v){if(v<=50)return ['Good','Air quality is good. It’s a great day to spend time outdoors.','#e5f2e7','#3d7b4e'];if(v<=100)return ['Moderate','Air quality is acceptable. Sensitive people may want to take it easy.','#f4f1d9','#82752b'];if(v<=150)return ['Sensitive groups','Sensitive groups may notice effects. Consider reducing long outdoor exertion.','#f9ead9','#a26327'];if(v<=200)return ['Unhealthy','Limit prolonged outdoor activity, especially if you’re sensitive to air pollution.','#f5dfdc','#a64f43'];if(v<=300)return ['Very unhealthy','Reduce outdoor activity and keep windows closed where possible.','#eee1ed','#845482'];return ['Hazardous','Avoid strenuous outdoor activity and seek cleaner indoor air.','#ecd9d9','#974444']}
-async function loadWeather(){setStatus('');$('place').textContent=[place.name,place.admin1].filter(Boolean).join(', ');document.body.classList.add('loading');try{const q=new URLSearchParams({latitude:place.latitude,longitude:place.longitude,current:'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m',hourly:'temperature_2m,precipitation_probability,weather_code,uv_index',daily:'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max',timezone:place.timezone||'auto',forecast_days:'5'});const aq=new URLSearchParams({latitude:place.latitude,longitude:place.longitude,current:'us_aqi,pm2_5,pm10,uv_index',timezone:place.timezone||'auto'});const [wr,ar]=await Promise.all([fetch('https://api.open-meteo.com/v1/forecast?'+q),fetch('https://air-quality-api.open-meteo.com/v1/air-quality?'+aq)]);if(!wr.ok)throw Error('Weather data could not be loaded.');const [d,a]=await Promise.all([wr.json(),ar.ok?ar.json():Promise.resolve(null)]);render(d,a)}catch(e){setStatus('Could not load current conditions. Check your connection and try again.');$('condition').textContent='Data unavailable'}finally{document.body.classList.remove('loading')}}
-function render(d,a){const c=d.current,di=d.daily,h=d.hourly,code=c.weather_code;$('temp').innerHTML=fmtTemp(c.temperature_2m).replace('°','')+'<sup>°</sup>';$('condition').textContent=label(code)[0];$('feels').textContent='Feels like '+fmtTemp(c.apparent_temperature);$('high').textContent=fmtTemp(di.temperature_2m_max[0]);$('low').textContent=fmtTemp(di.temperature_2m_min[0]);$('sunrise').textContent='↑ '+clock(di.sunrise[0]);$('sunset').textContent='↓ '+clock(di.sunset[0]);$('localTime').textContent='Local time · '+localClock(c.time);$('detailDate').textContent=new Date().toLocaleDateString(undefined,{month:'short',day:'numeric'});$('humidity').textContent=c.relative_humidity_2m+'%';$('wind').textContent=Math.round(c.wind_speed_10m)+' km/h';$('windDir').textContent='from '+direction(c.wind_direction_10m);$('uvDetail').textContent=di.uv_index_max[0].toFixed(1);$('uvNote').textContent=uvText(di.uv_index_max[0]);$('rain').textContent=(di.precipitation_probability_max[0]??0)+'%';const uvNow=h.uv_index[findHour(h.time,c.time)]??di.uv_index_max[0];$('uv').textContent=uvNow.toFixed(1);if(a?.current){const v=Math.round(a.current.us_aqi??0),info=aqiInfo(v);$('aqi').textContent=v;$('aqiStatus').textContent=info[0];$('aqiStatus').style.background=info[2];$('aqiStatus').style.color=info[3];$('aqiDesc').textContent=info[1];$('pm25').textContent=Number(a.current.pm2_5).toFixed(1);$('pm10').textContent=Number(a.current.pm10).toFixed(1)}else{$('aqi').textContent='—';$('aqiStatus').textContent='Unavailable';$('aqiDesc').textContent='Air quality data is unavailable for this location.'}renderHours(h,c.time);renderDays(di)}function findHour(times,now){let i=times.findIndex(t=>t>=now.slice(0,13));return Math.max(i,0)}function direction(deg){return ['N','NE','E','SE','S','SW','W','NW'][Math.round(deg/45)%8]}function uvText(v){return v<3?'Low exposure':v<6?'Moderate exposure':v<8?'High exposure':v<11?'Very high exposure':'Extreme exposure'}function renderHours(h,now){let start=findHour(h.time,now);$('hourly').innerHTML=Array.from({length:12},(_,j)=>{let i=start+j;if(i>=h.time.length)return '';return `<div class="hour ${j===0?'now':''}"><div class="hour-time">${j===0?'Now':clock(h.time[i])}</div><div class="weather-icon">${label(h.weather_code[i])[1]}</div><div class="hour-temp">${fmtTemp(h.temperature_2m[i])}</div><div class="rain">${h.precipitation_probability[i]||0}% rain</div></div>`}).join('')}function renderDays(d){$('days').innerHTML=d.time.map((date,i)=>`<div class="day"><div class="day-name">${dayName(date,i)}</div><div class="day-icon">${label(d.weather_code[i])[1]}</div><div class="day-high">${fmtTemp(d.temperature_2m_max[i])}</div><div class="bar"></div><div class="day-low">${fmtTemp(d.temperature_2m_min[i])}</div></div>`).join('')}
-let timer;const search=$('search'),results=$('results');search.addEventListener('input',()=>{clearTimeout(timer);const text=search.value.trim();if(text.length<2){results.classList.remove('open');return}timer=setTimeout(()=>searchPlaces(text),280)});async function searchPlaces(q){try{const u=new URL('https://geocoding-api.open-meteo.com/v1/search');u.search=new URLSearchParams({name:q,count:'6',language:'en',format:'json'});const r=await fetch(u);const data=await r.json();const list=data.results||[];results.innerHTML=list.length?list.map((p,i)=>`<button class="result" data-i="${i}"><strong>${esc(p.name)}</strong><small>${esc([p.admin1,p.country].filter(Boolean).join(', '))}</small></button>`).join(''):'<div class="result"><small>No places found. Try another spelling.</small></div>';results.classList.add('open');results.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{const p=list[+b.dataset.i];place={...p};search.value='';results.classList.remove('open');loadWeather()})}catch{results.innerHTML='<div class="result"><small>Search is temporarily unavailable.</small></div>';results.classList.add('open')}}function esc(s=''){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))results.classList.remove('open')});$('cBtn').onclick=()=>{unit='c';$('cBtn').classList.add('active');$('fBtn').classList.remove('active');loadWeather()};$('fBtn').onclick=()=>{unit='f';$('fBtn').classList.add('active');$('cBtn').classList.remove('active');loadWeather()};$('locate').onclick=()=>{if(!navigator.geolocation){setStatus('Location access is not supported by this browser.');return}setStatus('Finding your location…');navigator.geolocation.getCurrentPosition(async p=>{try{let url=new URL('https://geocoding-api.open-meteo.com/v1/reverse');url.search=new URLSearchParams({latitude:p.coords.latitude,longitude:p.coords.longitude,language:'en',format:'json'});let r=await fetch(url),x=await r.json();place=x.results?.[0]||{name:'Your location',latitude:p.coords.latitude,longitude:p.coords.longitude,timezone:'auto'};place.latitude=p.coords.latitude;place.longitude=p.coords.longitude;search.value='';loadWeather()}catch{place={name:'Your location',latitude:p.coords.latitude,longitude:p.coords.longitude,timezone:'auto'};loadWeather()}},()=>setStatus('Location access was not granted. Search for a place instead.'))};$('today').textContent=new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(new Date());loadWeather();
+/**
+ * W weather — a daily field report
+ * Weather, air quality, and conditions powered by Open-Meteo APIs.
+ */
 
-const revealObserver=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){entry.target.classList.add('is-visible');revealObserver.unobserve(entry.target)}}},{threshold:.12});document.querySelectorAll('.reveal').forEach(section=>revealObserver.observe(section));
+// Helper utility for DOM element selection
+const $ = (id) => document.getElementById(id);
 
+// Application State
+let unit = 'c';
+let place = {
+  name: 'Bengaluru',
+  admin1: 'Karnataka',
+  country: 'India',
+  latitude: 12.9716,
+  longitude: 77.5946,
+  timezone: 'Asia/Kolkata'
+};
+
+// WMO Weather Interpretation Codes (WW)
+const wmo = {
+  0: ['Clear sky', '☀️'],
+  1: ['Mostly clear', '🌤️'],
+  2: ['Partly cloudy', '⛅'],
+  3: ['Overcast', '☁️'],
+  45: ['Foggy', '🌫️'],
+  48: ['Rime fog', '🌫️'],
+  51: ['Light drizzle', '🌦️'],
+  53: ['Drizzle', '🌦️'],
+  55: ['Heavy drizzle', '🌧️'],
+  56: ['Freezing drizzle', '🌧️'],
+  57: ['Freezing drizzle', '🌧️'],
+  61: ['Light rain', '🌦️'],
+  63: ['Rain', '🌧️'],
+  65: ['Heavy rain', '🌧️'],
+  66: ['Freezing rain', '🌧️'],
+  67: ['Heavy freezing rain', '🌧️'],
+  71: ['Light snow', '🌨️'],
+  73: ['Snow', '🌨️'],
+  75: ['Heavy snow', '❄️'],
+  77: ['Snow grains', '🌨️'],
+  80: ['Rain showers', '🌦️'],
+  81: ['Rain showers', '🌧️'],
+  82: ['Heavy showers', '⛈️'],
+  85: ['Snow showers', '🌨️'],
+  86: ['Heavy snow showers', '❄️'],
+  95: ['Thunderstorm', '⛈️'],
+  96: ['Thunderstorm & hail', '⛈️'],
+  99: ['Thunderstorm & hail', '⛈️']
+};
+
+const label = (code) => wmo[code] || ['Variable conditions', '🌤️'];
+
+// Formatting & Calculation Helpers
+function fmtTemp(n) {
+  return Math.round(unit === 'c' ? n : (n * 9) / 5 + 32) + '°';
+}
+
+function dayName(d, i) {
+  return i === 0
+    ? 'Today'
+    : new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short' });
+}
+
+function clock(s) {
+  return new Date(s).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function localClock(s) {
+  try {
+    return new Intl.DateTimeFormat([], {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: place.timezone
+    }).format(new Date(s));
+  } catch {
+    return clock(s);
+  }
+}
+
+function setStatus(s) {
+  $('status').textContent = s;
+}
+
+function aqiInfo(v) {
+  if (v <= 50) {
+    return [
+      'Good',
+      'Air quality is good. It’s a great day to spend time outdoors.',
+      '#e5f2e7',
+      '#3d7b4e'
+    ];
+  }
+  if (v <= 100) {
+    return [
+      'Moderate',
+      'Air quality is acceptable. Sensitive people may want to take it easy.',
+      '#f4f1d9',
+      '#82752b'
+    ];
+  }
+  if (v <= 150) {
+    return [
+      'Sensitive groups',
+      'Sensitive groups may notice effects. Consider reducing long outdoor exertion.',
+      '#f9ead9',
+      '#a26327'
+    ];
+  }
+  if (v <= 200) {
+    return [
+      'Unhealthy',
+      'Limit prolonged outdoor activity, especially if you’re sensitive to air pollution.',
+      '#f5dfdc',
+      '#a64f43'
+    ];
+  }
+  if (v <= 300) {
+    return [
+      'Very unhealthy',
+      'Reduce outdoor activity and keep windows closed where possible.',
+      '#eee1ed',
+      '#845482'
+    ];
+  }
+  return [
+    'Hazardous',
+    'Avoid strenuous outdoor activity and seek cleaner indoor air.',
+    '#ecd9d9',
+    '#974444'
+  ];
+}
+
+function findHour(times, now) {
+  const i = times.findIndex((t) => t >= now.slice(0, 13));
+  return Math.max(i, 0);
+}
+
+function direction(deg) {
+  return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(deg / 45) % 8];
+}
+
+function uvText(v) {
+  return v < 3
+    ? 'Low exposure'
+    : v < 6
+    ? 'Moderate exposure'
+    : v < 8
+    ? 'High exposure'
+    : v < 11
+    ? 'Very high exposure'
+    : 'Extreme exposure';
+}
+
+function esc(s = '') {
+  return s.replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
+// Data Fetching
+async function loadWeather() {
+  setStatus('');
+  $('place').textContent = [place.name, place.admin1].filter(Boolean).join(', ');
+  document.body.classList.add('loading');
+
+  try {
+    const q = new URLSearchParams({
+      latitude: place.latitude,
+      longitude: place.longitude,
+      current:
+        'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m',
+      hourly: 'temperature_2m,precipitation_probability,weather_code,uv_index',
+      daily:
+        'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max',
+      timezone: place.timezone || 'auto',
+      forecast_days: '5'
+    });
+
+    const aq = new URLSearchParams({
+      latitude: place.latitude,
+      longitude: place.longitude,
+      current: 'us_aqi,pm2_5,pm10,uv_index',
+      timezone: place.timezone || 'auto'
+    });
+
+    const [wr, ar] = await Promise.all([
+      fetch('https://api.open-meteo.com/v1/forecast?' + q),
+      fetch('https://air-quality-api.open-meteo.com/v1/air-quality?' + aq)
+    ]);
+
+    if (!wr.ok) throw new Error('Weather data could not be loaded.');
+
+    const [d, a] = await Promise.all([
+      wr.json(),
+      ar.ok ? ar.json() : Promise.resolve(null)
+    ]);
+
+    render(d, a);
+  } catch (e) {
+    setStatus('Could not load current conditions. Check your connection and try again.');
+    $('condition').textContent = 'Data unavailable';
+  } finally {
+    document.body.classList.remove('loading');
+  }
+}
+
+// Rendering Views
+function render(d, a) {
+  const c = d.current;
+  const di = d.daily;
+  const h = d.hourly;
+  const code = c.weather_code;
+
+  $('temp').innerHTML = fmtTemp(c.temperature_2m).replace('°', '') + '<sup>°</sup>';
+  $('condition').textContent = label(code)[0];
+  $('feels').textContent = 'Feels like ' + fmtTemp(c.apparent_temperature);
+  $('high').textContent = fmtTemp(di.temperature_2m_max[0]);
+  $('low').textContent = fmtTemp(di.temperature_2m_min[0]);
+  $('sunrise').textContent = '↑ ' + clock(di.sunrise[0]);
+  $('sunset').textContent = '↓ ' + clock(di.sunset[0]);
+  $('localTime').textContent = 'Local time · ' + localClock(c.time);
+  $('detailDate').textContent = new Date().toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric'
+  });
+  $('humidity').textContent = c.relative_humidity_2m + '%';
+  $('wind').textContent = Math.round(c.wind_speed_10m) + ' km/h';
+  $('windDir').textContent = 'from ' + direction(c.wind_direction_10m);
+  $('uvDetail').textContent = di.uv_index_max[0].toFixed(1);
+  $('uvNote').textContent = uvText(di.uv_index_max[0]);
+  $('rain').textContent = (di.precipitation_probability_max[0] ?? 0) + '%';
+
+  const uvNow = h.uv_index[findHour(h.time, c.time)] ?? di.uv_index_max[0];
+  $('uv').textContent = uvNow.toFixed(1);
+
+  if (a?.current) {
+    const v = Math.round(a.current.us_aqi ?? 0);
+    const info = aqiInfo(v);
+    $('aqi').textContent = v;
+    $('aqiStatus').textContent = info[0];
+    $('aqiStatus').style.background = info[2];
+    $('aqiStatus').style.color = info[3];
+    $('aqiDesc').textContent = info[1];
+    $('pm25').textContent = Number(a.current.pm2_5).toFixed(1);
+    $('pm10').textContent = Number(a.current.pm10).toFixed(1);
+  } else {
+    $('aqi').textContent = '—';
+    $('aqiStatus').textContent = 'Unavailable';
+    $('aqiDesc').textContent = 'Air quality data is unavailable for this location.';
+  }
+
+  renderHours(h, c.time);
+  renderDays(di);
+}
+
+function renderHours(h, now) {
+  const start = findHour(h.time, now);
+  $('hourly').innerHTML = Array.from({ length: 12 }, (_, j) => {
+    const i = start + j;
+    if (i >= h.time.length) return '';
+    return `
+      <div class="hour ${j === 0 ? 'now' : ''}">
+        <div class="hour-time">${j === 0 ? 'Now' : clock(h.time[i])}</div>
+        <div class="weather-icon">${label(h.weather_code[i])[1]}</div>
+        <div class="hour-temp">${fmtTemp(h.temperature_2m[i])}</div>
+        <div class="rain">${h.precipitation_probability[i] || 0}% rain</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDays(d) {
+  $('days').innerHTML = d.time
+    .map(
+      (date, i) => `
+        <div class="day">
+          <div class="day-name">${dayName(date, i)}</div>
+          <div class="day-icon">${label(d.weather_code[i])[1]}</div>
+          <div class="day-high">${fmtTemp(d.temperature_2m_max[i])}</div>
+          <div class="bar"></div>
+          <div class="day-low">${fmtTemp(d.temperature_2m_min[i])}</div>
+        </div>
+      `
+    )
+    .join('');
+}
+
+// Search & Geolocation Handling
+let timer;
+const search = $('search');
+const results = $('results');
+
+search.addEventListener('input', () => {
+  clearTimeout(timer);
+  const text = search.value.trim();
+  if (text.length < 2) {
+    results.classList.remove('open');
+    return;
+  }
+  timer = setTimeout(() => searchPlaces(text), 280);
+});
+
+async function searchPlaces(q) {
+  try {
+    const u = new URL('https://geocoding-api.open-meteo.com/v1/search');
+    u.search = new URLSearchParams({
+      name: q,
+      count: '6',
+      language: 'en',
+      format: 'json'
+    });
+
+    const r = await fetch(u);
+    const data = await r.json();
+    const list = data.results || [];
+
+    results.innerHTML = list.length
+      ? list
+          .map(
+            (p, i) => `
+              <button class="result" data-i="${i}">
+                <strong>${esc(p.name)}</strong>
+                <small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small>
+              </button>
+            `
+          )
+          .join('')
+      : '<div class="result"><small>No places found. Try another spelling.</small></div>';
+
+    results.classList.add('open');
+
+    results.querySelectorAll('button[data-i]').forEach((b) => {
+      b.onclick = () => {
+        const p = list[+b.dataset.i];
+        place = { ...p };
+        search.value = '';
+        results.classList.remove('open');
+        loadWeather();
+      };
+    });
+  } catch {
+    results.innerHTML = '<div class="result"><small>Search is temporarily unavailable.</small></div>';
+    results.classList.add('open');
+  }
+}
+
+// Dismiss search suggestions on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-wrap')) {
+    results.classList.remove('open');
+  }
+});
+
+// Unit Toggles
+$('cBtn').onclick = () => {
+  unit = 'c';
+  $('cBtn').classList.add('active');
+  $('fBtn').classList.remove('active');
+  loadWeather();
+};
+
+$('fBtn').onclick = () => {
+  unit = 'f';
+  $('fBtn').classList.add('active');
+  $('cBtn').classList.remove('active');
+  loadWeather();
+};
+
+// Geolocation Handler
+$('locate').onclick = () => {
+  if (!navigator.geolocation) {
+    setStatus('Location access is not supported by this browser.');
+    return;
+  }
+
+  setStatus('Finding your location…');
+
+  navigator.geolocation.getCurrentPosition(
+    async (p) => {
+      try {
+        const url = new URL('https://geocoding-api.open-meteo.com/v1/reverse');
+        url.search = new URLSearchParams({
+          latitude: p.coords.latitude,
+          longitude: p.coords.longitude,
+          language: 'en',
+          format: 'json'
+        });
+
+        const r = await fetch(url);
+        const x = await r.json();
+
+        place = x.results?.[0] || {
+          name: 'Your location',
+          latitude: p.coords.latitude,
+          longitude: p.coords.longitude,
+          timezone: 'auto'
+        };
+        place.latitude = p.coords.latitude;
+        place.longitude = p.coords.longitude;
+        search.value = '';
+        loadWeather();
+      } catch {
+        place = {
+          name: 'Your location',
+          latitude: p.coords.latitude,
+          longitude: p.coords.longitude,
+          timezone: 'auto'
+        };
+        loadWeather();
+      }
+    },
+    () => setStatus('Location access was not granted. Search for a place instead.')
+  );
+};
+
+// Initialize Date & Weather on Load
+$('today').textContent = new Intl.DateTimeFormat(undefined, {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric'
+}).format(new Date());
+
+loadWeather();
+
+// Scroll Reveal Animations
+const revealObserver = new IntersectionObserver(
+  (entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        revealObserver.unobserve(entry.target);
+      }
+    }
+  },
+  { threshold: 0.12 }
+);
+
+document.querySelectorAll('.reveal').forEach((section) => {
+  revealObserver.observe(section);
+});
